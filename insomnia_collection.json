@@ -1,0 +1,605 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2024-12-16T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_gopubli",
+      "parentId": null,
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "GoPubli API",
+      "description": "API completa do sistema GoPubli",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_gopubli",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000/api",
+        "admin_token": "",
+        "company_token": "",
+        "influencer_token": ""
+      },
+      "_type": "environment"
+    },
+    {
+      "_id": "folder_admin",
+      "parentId": "wrk_gopubli",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "👨‍💼 Administrator",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_admin_register",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Register",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Admin Teste\",\n  \"email\": \"admin@gopubli.com\",\n  \"password\": \"senha12345\",\n  \"password_confirmation\": \"senha12345\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_login",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@gopubli.com\",\n  \"password\": \"senha12345\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_me",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Get Profile",
+      "method": "GET",
+      "url": "{{ _.base_url }}/admin/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_logout",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Logout",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/logout",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_forgot",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Forgot Password",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/forgot-password",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@gopubli.com\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_reset",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Reset Password",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/reset-password",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@gopubli.com\",\n  \"token\": \"TOKEN_RECEBIDO_POR_EMAIL\",\n  \"password\": \"novasenha123\",\n  \"password_confirmation\": \"novasenha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_update_profile",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Update Profile",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/admin/profile",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Admin Atualizado\",\n  \"phone\": \"11999999999\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_upload_avatar",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Upload Avatar",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/profile/avatar",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "avatar",
+            "type": "file",
+            "fileName": "",
+            "value": ""
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_delete_avatar",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Delete Avatar",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/admin/profile/avatar",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_send_verification",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Send Verification Email",
+      "method": "POST",
+      "url": "{{ _.base_url }}/admin/email/send-verification",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_admin_check_verification",
+      "parentId": "folder_admin",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Check Verification Status",
+      "method": "GET",
+      "url": "{{ _.base_url }}/admin/email/check-verification",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "folder_company",
+      "parentId": "wrk_gopubli",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "🏢 Company",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_company_register",
+      "parentId": "folder_company",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Register",
+      "method": "POST",
+      "url": "{{ _.base_url }}/company/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Empresa Teste LTDA\",\n  \"email\": \"empresa@gopubli.com\",\n  \"password\": \"senha12345\",\n  \"password_confirmation\": \"senha12345\",\n  \"cnpj\": \"12345678000190\",\n  \"phone\": \"11999999999\",\n  \"address\": \"Rua Teste, 123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_company_login",
+      "parentId": "folder_company",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/company/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"empresa@gopubli.com\",\n  \"password\": \"senha12345\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_company_me",
+      "parentId": "folder_company",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Get Profile",
+      "method": "GET",
+      "url": "{{ _.base_url }}/company/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.company_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_company_logout",
+      "parentId": "folder_company",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Logout",
+      "method": "POST",
+      "url": "{{ _.base_url }}/company/logout",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.company_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_company_update_profile",
+      "parentId": "folder_company",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Update Profile",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/company/profile",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Nova Empresa LTDA\",\n  \"cnpj\": \"12345678000190\",\n  \"phone\": \"11888888888\",\n  \"address\": \"Av. Paulista, 1000\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.company_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_company_upload_logo",
+      "parentId": "folder_company",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Upload Logo",
+      "method": "POST",
+      "url": "{{ _.base_url }}/company/profile/logo",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "logo",
+            "type": "file",
+            "fileName": "",
+            "value": ""
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.company_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "folder_influencer",
+      "parentId": "wrk_gopubli",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "🎬 Influencer",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_influencer_register",
+      "parentId": "folder_influencer",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Register",
+      "method": "POST",
+      "url": "{{ _.base_url }}/influencer/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@gopubli.com\",\n  \"password\": \"senha12345\",\n  \"password_confirmation\": \"senha12345\",\n  \"cpf\": \"12345678900\",\n  \"phone\": \"11999999999\",\n  \"instagram\": \"@joaosilva\",\n  \"tiktok\": \"@joaosilva\",\n  \"youtube\": \"@joaosilva\",\n  \"bio\": \"Influenciador digital focado em tecnologia\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_influencer_login",
+      "parentId": "folder_influencer",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/influencer/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"joao@gopubli.com\",\n  \"password\": \"senha12345\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_influencer_me",
+      "parentId": "folder_influencer",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Get Profile",
+      "method": "GET",
+      "url": "{{ _.base_url }}/influencer/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.influencer_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_influencer_logout",
+      "parentId": "folder_influencer",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Logout",
+      "method": "POST",
+      "url": "{{ _.base_url }}/influencer/logout",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.influencer_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_influencer_update_profile",
+      "parentId": "folder_influencer",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Update Profile",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/influencer/profile",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"João Silva Atualizado\",\n  \"phone\": \"11888888888\",\n  \"instagram\": \"@joaosilva_oficial\",\n  \"bio\": \"Nova bio do influenciador\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.influencer_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_influencer_upload_avatar",
+      "parentId": "folder_influencer",
+      "modified": 1702684800000,
+      "created": 1702684800000,
+      "name": "Upload Avatar",
+      "method": "POST",
+      "url": "{{ _.base_url }}/influencer/profile/avatar",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "avatar",
+            "type": "file",
+            "fileName": "",
+            "value": ""
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.influencer_token }}"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    }
+  ]
+}
