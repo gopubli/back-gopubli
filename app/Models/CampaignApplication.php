@@ -100,9 +100,7 @@ class CampaignApplication extends Model
      */
     public function withdraw()
     {
-        $this->update([
-            'status' => 'withdrawn',
-        ]);
+        $this->delete();
     }
 
     /**

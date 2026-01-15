@@ -45,6 +45,13 @@ class Influencer extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['avatar_url'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -56,6 +63,18 @@ class Influencer extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'active' => 'boolean',
         ];
+    }
+
+    /**
+     * Accessor para URL completa do avatar
+     */
+    protected function avatarUrl(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn () => $this->avatar 
+                ? config('app.url') . '/storage/' . $this->avatar
+                : null,
+        );
     }
 
     /**

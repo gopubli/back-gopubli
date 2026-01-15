@@ -80,9 +80,12 @@ class InfluencerCampaignController extends Controller
 
         return response()->json([
             'total' => $applications->total(),
-            'pending_count' => CampaignApplication::where('influencer_id', $influencer->id)->where('status', 'pending')->count(),
-            'accepted_count' => CampaignApplication::where('influencer_id', $influencer->id)->where('status', 'accepted')->count(),
-            'rejected_count' => CampaignApplication::where('influencer_id', $influencer->id)->where('status', 'rejected')->count(),
+            'pending_count' => CampaignApplication::where('influencer_id', $influencer->id)
+                ->where('status', 'pending')->count(),
+            'accepted_count' => CampaignApplication::where('influencer_id', $influencer->id)
+                ->where('status', 'accepted')->count(),
+            'rejected_count' => CampaignApplication::where('influencer_id', $influencer->id)
+                ->where('status', 'rejected')->count(),
             'applications' => $applications,
         ]);
     }

@@ -32,7 +32,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'message' => 'Avatar atualizado com sucesso',
-            'avatar_url' => Storage::url($path),
+            'avatar_url' => config('app.url') . '/storage/' . $path,
             'user' => $user
         ]);
     }
@@ -68,7 +68,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'message' => 'Logo atualizado com sucesso',
-            'logo_url' => Storage::url($path),
+            'logo_url' => config('app.url') . '/storage/' . $path,
             'user' => $user
         ]);
     }

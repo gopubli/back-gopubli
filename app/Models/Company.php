@@ -40,6 +40,13 @@ class Company extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['logo_url'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -51,6 +58,18 @@ class Company extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'active' => 'boolean',
         ];
+    }
+
+    /**
+     * Accessor para URL completa do logo
+     */
+    protected function logoUrl(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn () => $this->logo 
+                ? config('app.url') . '/storage/' . $this->logo
+                : null,
+        );
     }
 
     /**
