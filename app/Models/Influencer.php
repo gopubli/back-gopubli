@@ -22,6 +22,7 @@ class Influencer extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'cpf',
+        'birth',
         'phone',
         'instagram',
         'tiktok',
