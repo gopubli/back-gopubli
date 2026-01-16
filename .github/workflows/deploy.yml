@@ -29,6 +29,41 @@ jobs:
       - name: Build frontend assets
         run: npm run build
         
+      - name: Create setup file for server
+        run: |
+          echo '<?php
+          // Script auto-gerado pelo deploy
+          // Acesse: https://api.gopubli.com.br/setup-server.php?secret=gopubli2026
+          // DELETE após executar!
+          $secret = $_GET["secret"] ?? "";
+          if ($secret !== "gopubli2026") die("Acesso negado");
+          echo "<h1>Setup GoPubli</h1><pre>";
+          try {
+              require __DIR__."/../vendor/autoload.php";
+              $app = require_once __DIR__."/../bootstrap/app.php";
+              $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+              echo "Gerando APP_KEY...\n";
+              $kernel->call("key:generate", ["--force" => true]);
+              echo "Limpando caches...\n";
+              $kernel->call("cache:clear");
+              $kernel->call("config:clear");
+              echo "Executando migrations...\n";
+              $kernel->call("migrate", ["--force" => true]);
+              echo "Executando seeders...\n";
+              try { $kernel->call("db:seed", ["--force" => true]); } catch(Exception $e) {}
+              echo "Criando storage link...\n";
+              try { $kernel->call("storage:link"); } catch(Exception $e) {}
+              echo "Otimizando...\n";
+              $kernel->call("config:cache");
+              $kernel->call("route:cache");
+              $kernel->call("view:cache");
+              echo "\n✅ CONCLUÍDO! Delete este arquivo agora!\n";
+          } catch(Exception $e) {
+              echo "ERRO: " . $e->getMessage();
+          }
+          echo "</pre>";
+          ?>' > public/setup-server.php
+        
       - name: Prepare deployment files
         run: |
           mkdir -p deployment
