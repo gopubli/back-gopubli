@@ -1,0 +1,66 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main  # ou production, master, etc.
+  workflow_dispatch:  # Permite executar manualmente
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🚚 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔧 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, json, zip
+          coverage: none
+          
+      - name: 📦 Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        
+      - name: 📁 Create deployment package
+        run: |
+          mkdir -p deployment
+          rsync -av --exclude='node_modules' --exclude='.git' --exclude='tests' --exclude='.env' --exclude='storage' --exclude='deployment' . deployment/
+          
+      - name: 🔐 Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+          
+      - name: 🌐 Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: 🚀 Deploy to server
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          # Upload deployment package
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.env' \
+            --exclude='storage' \
+            deployment/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/releases/${{ github.sha }}/
+          
+          # Execute deployment script on server
+          ssh $DEPLOY_USER@$DEPLOY_HOST "bash -s" < ./deploy.sh ${{ github.sha }}
+          
+      - name: ✅ Deployment successful
+        run: echo "Deployment completed successfully!"
+        
+      - name: 🔔 Notify on failure
+        if: failure()
+        run: echo "Deployment failed! Check the logs above."
