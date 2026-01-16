@@ -57,7 +57,7 @@ jobs:
           protocol: ftp
           port: 21
           local-dir: ./deployment/
-          server-dir: /home/gopublicom/api.gopubli.com.br/
+          server-dir: ./api.gopubli.com.br/
           dangerous-clean-slate: false
           exclude: |
             **/.git*
