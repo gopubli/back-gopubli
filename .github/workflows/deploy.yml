@@ -52,11 +52,12 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ftp.gopubli.com.br
-          username: ${{ secrets.FTP_USERNAME }}
+          username: gopublicom
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
+          protocol: ftp
+          port: 21
           local-dir: ./deployment/
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          server-dir: /home/gopublicom/api.gopubli.com.br/
           dangerous-clean-slate: false
           exclude: |
             **/.git*
