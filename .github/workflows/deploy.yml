@@ -3,7 +3,7 @@ name: Deploy Laravel via SSH
 on:
   push:
     branches:
-      - homolog
+      - main
   workflow_dispatch:  # Permite executar manualmente
 
 jobs:
