@@ -21,7 +21,7 @@ jobs:
 
       - name: Sync files to server
         run: |
-          rsync -avz --no-perms -e 'ssh -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no' \
+          rsync -avz --no-perms -e 'ssh -p 22022 -o StrictHostKeyChecking=no' \
             --exclude='.git*' \
             --exclude='node_modules' \
             --exclude='vendor' \
@@ -36,7 +36,7 @@ jobs:
   
       - name: Run remote commands
         run: |
-          ssh -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd ${{ secrets.DEPLOY_PATH }}
 
           # Corrigir permissões de usuário e grupo
