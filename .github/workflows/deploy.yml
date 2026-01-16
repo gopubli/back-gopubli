@@ -1,9 +1,9 @@
-name: Deploy to Production
+name: Deploy Laravel via SSH
 
 on:
   push:
     branches:
-      - main  # ou production, master, etc.
+      - homolog
   workflow_dispatch:  # Permite executar manualmente
 
 jobs:
@@ -11,56 +11,75 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 🚚 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: 🔧 Setup PHP
-        uses: shivammathur/setup-php@v2
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
         with:
-          php-version: '8.4'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, json, zip
-          coverage: none
-          
-      - name: 📦 Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-        
-      - name: 📁 Create deployment package
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Sync files to server
         run: |
-          mkdir -p deployment
-          rsync -av --exclude='node_modules' --exclude='.git' --exclude='tests' --exclude='.env' --exclude='storage' --exclude='deployment' . deployment/
-          
-      - name: 🔐 Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
-          
-      - name: 🌐 Add server to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-          
-      - name: 🚀 Deploy to server
-        env:
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          # Upload deployment package
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='.github' \
+          rsync -avz --no-perms -e 'ssh -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no' \
+            --exclude='.git*' \
             --exclude='node_modules' \
-            --exclude='tests' \
+            --exclude='vendor' \
+            --exclude='composer.phar' \
             --exclude='.env' \
+            --exclude='storage/app/public' \
             --exclude='storage' \
-            deployment/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/releases/${{ github.sha }}/
-          
-          # Execute deployment script on server
-          ssh $DEPLOY_USER@$DEPLOY_HOST "bash -s" < ./deploy.sh ${{ github.sha }}
-          
-      - name: ✅ Deployment successful
-        run: echo "Deployment completed successfully!"
-        
-      - name: 🔔 Notify on failure
-        if: failure()
-        run: echo "Deployment failed! Check the logs above."
+            --exclude='public/storage' \
+            --exclude='lang' \
+            --delete \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
+  
+      - name: Run remote commands
+        run: |
+          ssh -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}
+
+          # Corrigir permissões de usuário e grupo
+          chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} .
+          chmod 644 ${{ secrets.DEPLOY_PATH }}/public/.htaccess || true
+          chown ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} ${{ secrets.DEPLOY_PATH }}/public/.htaccess || true
+          chmod 755 ${{ secrets.DEPLOY_PATH }}/public || true
+          chmod 755 ${{ secrets.DEPLOY_PATH }} || true
+
+          # permissões e ownership
+          chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} ${{ secrets.DEPLOY_PATH }}/storage ${{ secrets.DEPLOY_PATH }}/bootstrap/cache ${{ secrets.DEPLOY_PATH }}/public || true
+          find ${{ secrets.DEPLOY_PATH }}/storage -type d -exec chmod 755 {} \; || true
+          find ${{ secrets.DEPLOY_PATH }}/storage -type f -exec chmod 644 {} \; || true
+          chmod -R 755 ${{ secrets.DEPLOY_PATH }}/public/storage || true
+
+          # criar/recriar storage symlink de forma segura
+          if [ -L ${{ secrets.DEPLOY_PATH }}/public/storage ]; then
+            rm ${{ secrets.DEPLOY_PATH }}/public/storage || true
+            ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} ${{ secrets.DEPLOY_PATH }}/artisan storage:link || php ${{ secrets.DEPLOY_PATH }}/artisan storage:link || true
+          elif [ -d ${{ secrets.DEPLOY_PATH }}/public/storage ]; then
+            echo "public/storage is a directory — skipping"
+          else
+            ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} ${{ secrets.DEPLOY_PATH }}/artisan storage:link || php ${{ secrets.DEPLOY_PATH }}/artisan storage:link || true
+          fi
+
+          # Usar PHP explícito
+          export PATH="${{ secrets.PHP_BIN_PATH || '/usr/bin/ea-php83' }}:$PATH"
+          export COMPOSER_ALLOW_SUPERUSER=1
+
+          # Instalar dependências PHP
+          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} ${{ secrets.COMPOSER_PATH || '/opt/cpanel/composer/bin/composer' }} install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+          # Frontend
+          npm install
+          npm run build
+
+          # Comandos Laravel
+          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan migrate --force
+          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan config:cache
+          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan route:cache
+          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan view:cache
+          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan cache:clear
+
+          echo "✅ Deploy concluído!"
+
+          EOF
