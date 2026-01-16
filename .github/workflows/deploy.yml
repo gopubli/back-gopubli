@@ -51,11 +51,13 @@ jobs:
       - name: Deploy to server via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: ftp.gopubli.com.br
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
           local-dir: ./deployment/
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git*/**
