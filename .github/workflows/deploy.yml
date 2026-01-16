@@ -1,4 +1,4 @@
-name: Deploy Laravel via SSH
+name: Deploy Laravel via FTP
 
 on:
   push:
@@ -13,74 +13,56 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.8.0
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Sync files to server
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, zip
+          
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        
+      - name: Install Node dependencies
+        run: npm install
+        
+      - name: Build frontend assets
+        run: npm run build
+        
+      - name: Prepare deployment files
         run: |
-          rsync -avz --no-perms -e 'ssh -p 22022 -o StrictHostKeyChecking=no' \
+          mkdir -p deployment
+          rsync -av \
             --exclude='.git*' \
+            --exclude='.github' \
             --exclude='node_modules' \
-            --exclude='vendor' \
-            --exclude='composer.phar' \
+            --exclude='tests' \
             --exclude='.env' \
-            --exclude='storage/app/public' \
-            --exclude='storage' \
-            --exclude='public/storage' \
-            --exclude='lang' \
-            --delete \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
-  
-      - name: Run remote commands
-        run: |
-          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-
-          # Corrigir permissões de usuário e grupo
-          chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} .
-          chmod 644 ${{ secrets.DEPLOY_PATH }}/public/.htaccess || true
-          chown ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} ${{ secrets.DEPLOY_PATH }}/public/.htaccess || true
-          chmod 755 ${{ secrets.DEPLOY_PATH }}/public || true
-          chmod 755 ${{ secrets.DEPLOY_PATH }} || true
-
-          # permissões e ownership
-          chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} ${{ secrets.DEPLOY_PATH }}/storage ${{ secrets.DEPLOY_PATH }}/bootstrap/cache ${{ secrets.DEPLOY_PATH }}/public || true
-          find ${{ secrets.DEPLOY_PATH }}/storage -type d -exec chmod 755 {} \; || true
-          find ${{ secrets.DEPLOY_PATH }}/storage -type f -exec chmod 644 {} \; || true
-          chmod -R 755 ${{ secrets.DEPLOY_PATH }}/public/storage || true
-
-          # criar/recriar storage symlink de forma segura
-          if [ -L ${{ secrets.DEPLOY_PATH }}/public/storage ]; then
-            rm ${{ secrets.DEPLOY_PATH }}/public/storage || true
-            ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} ${{ secrets.DEPLOY_PATH }}/artisan storage:link || php ${{ secrets.DEPLOY_PATH }}/artisan storage:link || true
-          elif [ -d ${{ secrets.DEPLOY_PATH }}/public/storage ]; then
-            echo "public/storage is a directory — skipping"
-          else
-            ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} ${{ secrets.DEPLOY_PATH }}/artisan storage:link || php ${{ secrets.DEPLOY_PATH }}/artisan storage:link || true
-          fi
-
-          # Usar PHP explícito
-          export PATH="${{ secrets.PHP_BIN_PATH || '/usr/bin/ea-php83' }}:$PATH"
-          export COMPOSER_ALLOW_SUPERUSER=1
-
-          # Instalar dependências PHP
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} ${{ secrets.COMPOSER_PATH || '/opt/cpanel/composer/bin/composer' }} install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-
-          # Frontend
-          npm install
-          npm run build
-
-          # Comandos Laravel
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan migrate --force
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan config:cache
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan route:cache
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan view:cache
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan cache:clear
-          ${{ secrets.PHP_PATH || '/opt/cpanel/ea-php83/root/bin/php' }} artisan db:seed --force
-
-          echo "✅ Deploy concluído!"
-
-          EOF
+            --exclude='.env.example' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='deployment' \
+            --exclude='README.md' \
+            --exclude='*.md' \
+            ./ deployment/
+            
+      - name: Deploy to server via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./deployment/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/.env
+            **/tests/**
