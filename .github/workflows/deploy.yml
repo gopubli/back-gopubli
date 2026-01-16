@@ -26,44 +26,6 @@ jobs:
       - name: Install Node dependencies
         run: npm install
         
-      - name: Build frontend assets
-        run: npm run build
-        
-      - name: Create setup file for server
-        run: |
-          echo '<?php
-          // Script auto-gerado pelo deploy
-          // Acesse: https://api.gopubli.com.br/setup-server.php?secret=gopubli2026
-          // DELETE após executar!
-          $secret = $_GET["secret"] ?? "";
-          if ($secret !== "gopubli2026") die("Acesso negado");
-          echo "<h1>Setup GoPubli</h1><pre>";
-          try {
-              require __DIR__."/../vendor/autoload.php";
-              $app = require_once __DIR__."/../bootstrap/app.php";
-              $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-              echo "Gerando APP_KEY...\n";
-              $kernel->call("key:generate", ["--force" => true]);
-              echo "Limpando caches...\n";
-              $kernel->call("cache:clear");
-              $kernel->call("config:clear");
-              echo "Executando migrations...\n";
-              $kernel->call("migrate", ["--force" => true]);
-              echo "Executando seeders...\n";
-              try { $kernel->call("db:seed", ["--force" => true]); } catch(Exception $e) {}
-              echo "Criando storage link...\n";
-              try { $kernel->call("storage:link"); } catch(Exception $e) {}
-              echo "Otimizando...\n";
-              $kernel->call("config:cache");
-              $kernel->call("route:cache");
-              $kernel->call("view:cache");
-              echo "\n✅ CONCLUÍDO! Delete este arquivo agora!\n";
-          } catch(Exception $e) {
-              echo "ERRO: " . $e->getMessage();
-          }
-          echo "</pre>";
-          ?>' > public/setup-server.php
-        
       - name: Prepare deployment files
         run: |
           mkdir -p deployment
@@ -82,6 +44,52 @@ jobs:
             --exclude='README.md' \
             --exclude='*.md' \
             ./ deployment/
+            
+      - name: Create setup script in deployment
+        run: |
+          cat > deployment/public/setup-server.php << 'EOFSETUP'
+          <?php
+          $secret = $_GET['secret'] ?? '';
+          if ($secret !== 'gopubli2026') die('Acesso negado. Use: ?secret=gopubli2026');
+          echo "<h1>🚀 Setup GoPubli API</h1><pre>";
+          try {
+              require __DIR__.'/../vendor/autoload.php';
+              $app = require_once __DIR__.'/../bootstrap/app.php';
+              $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+              echo "✅ Laravel carregado!\n\n";
+              echo "📝 Gerando APP_KEY...\n";
+              $kernel->call('key:generate', ['--force' => true]);
+              echo "✅ APP_KEY gerada!\n\n";
+              echo "🧹 Limpando caches...\n";
+              $kernel->call('cache:clear');
+              $kernel->call('config:clear');
+              $kernel->call('route:clear');
+              $kernel->call('view:clear');
+              echo "✅ Caches limpos!\n\n";
+              echo "🗄️  Executando migrations...\n";
+              $kernel->call('migrate', ['--force' => true]);
+              echo "✅ Migrations executadas!\n\n";
+              echo "🌱 Executando seeders...\n";
+              try { $kernel->call('db:seed', ['--force' => true]); echo "✅ Seeders executados!\n\n"; } catch (Exception $e) { echo "⚠️  Seeders: " . $e->getMessage() . "\n\n"; }
+              echo "🔗 Criando storage link...\n";
+              try { $kernel->call('storage:link'); echo "✅ Storage link criado!\n\n"; } catch (Exception $e) { echo "⚠️  Storage link: " . $e->getMessage() . "\n\n"; }
+              echo "⚡ Otimizando para produção...\n";
+              $kernel->call('config:cache');
+              $kernel->call('route:cache');
+              $kernel->call('view:cache');
+              echo "✅ Otimização concluída!\n\n";
+              echo "========================================\n";
+              echo "🎉 SETUP CONCLUÍDO COM SUCESSO!\n";
+              echo "========================================\n\n";
+              echo "⚠️  IMPORTANTE: DELETE ESTE ARQUIVO AGORA!\n";
+              echo "Acesse: https://api.gopubli.com.br\n";
+          } catch (Exception $e) {
+              echo "❌ ERRO: " . $e->getMessage() . "\n\n";
+              echo $e->getTraceAsString();
+          }
+          echo "</pre>";
+          ?>
+          EOFSETUP
             
       - name: Deploy to server via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
