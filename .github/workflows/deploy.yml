@@ -36,14 +36,25 @@ jobs:
             --exclude='tests' \
             --exclude='.env' \
             --exclude='.env.example' \
-            --exclude='storage/logs/*' \
-            --exclude='storage/framework/cache/*' \
-            --exclude='storage/framework/sessions/*' \
-            --exclude='storage/framework/views/*' \
             --exclude='deployment' \
             --exclude='README.md' \
             --exclude='*.md' \
             ./ deployment/
+          
+          # Garantir estrutura de diretórios necessários
+          mkdir -p deployment/storage/app/public
+          mkdir -p deployment/storage/framework/{cache,sessions,views}/data
+          mkdir -p deployment/storage/logs
+          mkdir -p deployment/bootstrap/cache
+          
+          # Criar arquivos .gitkeep
+          touch deployment/storage/app/.gitkeep
+          touch deployment/storage/app/public/.gitkeep
+          touch deployment/storage/framework/cache/.gitkeep
+          touch deployment/storage/framework/sessions/.gitkeep
+          touch deployment/storage/framework/views/.gitkeep
+          touch deployment/storage/logs/.gitkeep
+          touch deployment/bootstrap/cache/.gitkeep
             
       - name: Create setup script in deployment
         run: |
@@ -52,36 +63,91 @@ jobs:
           $secret = $_GET['secret'] ?? '';
           if ($secret !== 'gopubli2026') die('Acesso negado. Use: ?secret=gopubli2026');
           echo "<h1>🚀 Setup GoPubli API</h1><pre>";
+          
+          // Verificações de ambiente
+          echo "🔍 Verificando ambiente...\n";
+          echo "PHP Version: " . phpversion() . "\n";
+          echo "Laravel Path: " . __DIR__ . "\n\n";
+          
+          // Verificar diretórios
+          $requiredDirs = [
+              __DIR__.'/../storage/app',
+              __DIR__.'/../storage/framework/cache',
+              __DIR__.'/../storage/framework/sessions',
+              __DIR__.'/../storage/framework/views',
+              __DIR__.'/../storage/logs',
+              __DIR__.'/../bootstrap/cache'
+          ];
+          
+          echo "📁 Verificando diretórios...\n";
+          foreach ($requiredDirs as $dir) {
+              if (!is_dir($dir)) {
+                  mkdir($dir, 0775, true);
+                  echo "✅ Criado: $dir\n";
+              }
+              if (!is_writable($dir)) {
+                  @chmod($dir, 0775);
+                  echo "⚠️  Tentando ajustar permissões: $dir\n";
+              }
+          }
+          echo "\n";
+          
           try {
               require __DIR__.'/../vendor/autoload.php';
               $app = require_once __DIR__.'/../bootstrap/app.php';
               $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
               echo "✅ Laravel carregado!\n\n";
+              
+              // Verificar .env
+              if (!file_exists(__DIR__.'/../.env')) {
+                  echo "❌ ERRO: Arquivo .env não encontrado!\n";
+                  echo "Crie o arquivo .env na raiz do projeto.\n\n";
+                  die();
+              }
+              echo "✅ Arquivo .env encontrado!\n\n";
+              
               echo "📝 Gerando APP_KEY...\n";
               $kernel->call('key:generate', ['--force' => true]);
               echo "✅ APP_KEY gerada!\n\n";
+              
               echo "🧹 Limpando caches...\n";
               $kernel->call('cache:clear');
               $kernel->call('config:clear');
               $kernel->call('route:clear');
               $kernel->call('view:clear');
               echo "✅ Caches limpos!\n\n";
+              
               echo "🗄️  Executando migrations...\n";
               $kernel->call('migrate', ['--force' => true]);
               echo "✅ Migrations executadas!\n\n";
+              
               echo "🌱 Executando seeders...\n";
-              try { $kernel->call('db:seed', ['--force' => true]); echo "✅ Seeders executados!\n\n"; } catch (Exception $e) { echo "⚠️  Seeders: " . $e->getMessage() . "\n\n"; }
+              try { 
+                  $kernel->call('db:seed', ['--force' => true]); 
+                  echo "✅ Seeders executados!\n\n"; 
+              } catch (Exception $e) { 
+                  echo "⚠️  Seeders: " . $e->getMessage() . "\n\n"; 
+              }
+              
               echo "🔗 Criando storage link...\n";
-              try { $kernel->call('storage:link'); echo "✅ Storage link criado!\n\n"; } catch (Exception $e) { echo "⚠️  Storage link: " . $e->getMessage() . "\n\n"; }
+              try { 
+                  $kernel->call('storage:link'); 
+                  echo "✅ Storage link criado!\n\n"; 
+              } catch (Exception $e) { 
+                  echo "⚠️  Storage link: " . $e->getMessage() . "\n\n"; 
+              }
+              
               echo "⚡ Otimizando para produção...\n";
               $kernel->call('config:cache');
               $kernel->call('route:cache');
               $kernel->call('view:cache');
               echo "✅ Otimização concluída!\n\n";
+              
               echo "========================================\n";
               echo "🎉 SETUP CONCLUÍDO COM SUCESSO!\n";
               echo "========================================\n\n";
               echo "⚠️  IMPORTANTE: DELETE ESTE ARQUIVO AGORA!\n";
+              echo "rm " . __FILE__ . "\n\n";
               echo "Acesse: https://api.gopubli.com.br\n";
           } catch (Exception $e) {
               echo "❌ ERRO: " . $e->getMessage() . "\n\n";
