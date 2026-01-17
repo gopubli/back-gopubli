@@ -2,19 +2,49 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/gopublicom/api.gopubli.com.br
+    - export COMPOSER_ALLOW_SUPERUSER=1
 
     # Copiar arquivos SEM .git
-    - /bin/rsync -av --delete --exclude=".git" ./ $DEPLOYPATH
+    - /bin/rsync -av --delete --exclude=".git" --exclude="node_modules" --exclude="vendor" ./ $DEPLOYPATH
+
+    # Criar estrutura de diretórios necessários
+    - /bin/mkdir -p $DEPLOYPATH/storage/app/public
+    - /bin/mkdir -p $DEPLOYPATH/storage/framework/cache/data
+    - /bin/mkdir -p $DEPLOYPATH/storage/framework/sessions
+    - /bin/mkdir -p $DEPLOYPATH/storage/framework/views
+    - /bin/mkdir -p $DEPLOYPATH/storage/logs
+    - /bin/mkdir -p $DEPLOYPATH/bootstrap/cache
 
     # Permissões corretas
     - /bin/chmod -R 755 $DEPLOYPATH
     - /bin/chmod -R 775 $DEPLOYPATH/storage
     - /bin/chmod -R 775 $DEPLOYPATH/bootstrap/cache
+    - /bin/find $DEPLOYPATH/storage -type d -exec chmod 755 {} \; || true
+    - /bin/find $DEPLOYPATH/storage -type f -exec chmod 644 {} \; || true
 
-    # Limpar cache antigo (seguro)
-    - /usr/bin/find $DEPLOYPATH/bootstrap/cache -type f -delete
-
-    # Limpar caches Laravel (sem quebrar produção)
+    # Limpar caches Laravel
     - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan config:clear || true
     - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan route:clear || true
     - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan view:clear || true
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan cache:clear || true
+
+    # Instalar dependências do Composer
+    - cd $DEPLOYPATH && /opt/cpanel/ea-php83/root/bin/php /opt/cpanel/composer/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+    # Instalar dependências Node e build
+    - cd $DEPLOYPATH && /usr/bin/npm install
+    - cd $DEPLOYPATH && /usr/bin/npm run build
+
+    # Executar migrations
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan migrate --force
+
+    # Criar storage link
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan storage:link || true
+
+    # Otimizar para produção
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan config:cache
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan route:cache
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan view:cache
+
+    # Mensagem de sucesso
+    - echo "✅ Deploy concluído com sucesso!"
