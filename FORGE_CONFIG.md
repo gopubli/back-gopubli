@@ -5,10 +5,10 @@
 - Database: MySQL 8.0
 - Node Version: 20.x
 
-## Site Configuration
+<!-- ## Site Configuration
 - Root Domain: api.gopubli.com.br
 - Web Directory: /public
-- Project Type: Laravel
+- Project Type: Laravel -->
 
 ## Environment Variables
 Configure no Forge em: Site → Environment
