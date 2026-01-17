@@ -4,147 +4,86 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Permite executar manualmente
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
         with:
-          php-version: '8.4'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, zip
-          coverage: none
-          
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-        
-      - name: Install Node dependencies and build assets
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Sync files to server
         run: |
-          npm ci
-          npm run build
-        
-      - name: Create deployment archive
-        run: |
-          tar -czf /tmp/deploy.tar.gz \
-            --exclude='.git' \
+          rsync -avz --no-perms -e 'ssh -p 22022 -o StrictHostKeyChecking=no' \
+            --exclude='.git*' \
             --exclude='.github' \
             --exclude='node_modules' \
-            --exclude='tests' \
+            --exclude='vendor' \
+            --exclude='composer.phar' \
             --exclude='.env' \
-            --exclude='.env.example' \
-            --exclude='storage/app/*' \
-            --exclude='storage/framework/cache/data/*' \
-            --exclude='storage/framework/sessions/*' \
-            --exclude='storage/framework/testing/*' \
-            --exclude='storage/framework/views/*' \
-            --exclude='storage/logs/*' \
-            --exclude='public/hot' \
+            --exclude='storage/app/public' \
+            --exclude='storage' \
+            --exclude='public/storage' \
+            --exclude='tests' \
             --exclude='*.md' \
-            --exclude='deploy.tar.gz' \
-            --exclude='deploy-remote.sh' \
-            .
-          mv /tmp/deploy.tar.gz .
-
-      - name: Create deployment script
+            --delete \
+            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/gopublicom/api.gopubli.com.br/
+  
+      - name: Run remote commands
         run: |
-          cat > deploy-remote.sh << 'EOFDEPLOY'
-          #!/bin/bash
-          set -e
-          
-          # Configurações
-          DEPLOY_PATH="/home/gopublicom/api.gopubli.com.br"
-          BACKUP_PATH="/home/gopublicom/backups"
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
-          echo "🚀 Iniciando deploy - $TIMESTAMP"
-          
-          # Criar diretórios se não existirem
-          mkdir -p $BACKUP_PATH
-          mkdir -p $DEPLOY_PATH/storage/{app/public,framework/{cache/data,sessions,views},logs}
-          mkdir -p $DEPLOY_PATH/bootstrap/cache
-          
-          # Backup do .env atual (se existir)
-          if [ -f "$DEPLOY_PATH/.env" ]; then
-              echo "📋 Backup do .env..."
-              cp $DEPLOY_PATH/.env $BACKUP_PATH/.env.$TIMESTAMP
+          ssh -p 22022 -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /home/gopublicom/api.gopubli.com.br
+
+          # Corrigir permissões
+          chown -R gopublicom:gopublicom .
+          chmod 644 /home/gopublicom/api.gopubli.com.br/public/.htaccess || true
+          chown gopublicom:gopublicom /home/gopublicom/api.gopubli.com.br/public/.htaccess || true
+          chmod 755 /home/gopublicom/api.gopubli.com.br/public || true
+          chmod 755 /home/gopublicom/api.gopubli.com.br || true
+
+          # Permissões de storage e cache
+          chown -R gopublicom:gopublicom /home/gopublicom/api.gopubli.com.br/storage /home/gopublicom/api.gopubli.com.br/bootstrap/cache /home/gopublicom/api.gopubli.com.br/public || true
+          find /home/gopublicom/api.gopubli.com.br/storage -type d -exec chmod 755 {} \; || true
+          find /home/gopublicom/api.gopubli.com.br/storage -type f -exec chmod 644 {} \; || true
+          chmod -R 755 /home/gopublicom/api.gopubli.com.br/public/storage || true
+
+          # Criar storage symlink
+          if [ -L /home/gopublicom/api.gopubli.com.br/public/storage ]; then
+            rm /home/gopublicom/api.gopubli.com.br/public/storage || true
+            /opt/cpanel/ea-php83/root/bin/php /home/gopublicom/api.gopubli.com.br/artisan storage:link || php /home/gopublicom/api.gopubli.com.br/artisan storage:link || true
+          elif [ -d /home/gopublicom/api.gopubli.com.br/public/storage ]; then
+            echo "public/storage is a directory — skipping"
+          else
+            /opt/cpanel/ea-php83/root/bin/php /home/gopublicom/api.gopubli.com.br/artisan storage:link || php /home/gopublicom/api.gopubli.com.br/artisan storage:link || true
           fi
-          
-          # Extrair novos arquivos
-          echo "📦 Extraindo arquivos..."
-          cd $DEPLOY_PATH
-          tar -xzf ~/deploy_temp/deploy.tar.gz
-          
-          # Restaurar .env
-          if [ -f "$BACKUP_PATH/.env.$TIMESTAMP" ]; then
-              cp $BACKUP_PATH/.env.$TIMESTAMP $DEPLOY_PATH/.env
-          fi
-          
-          # Ajustar permissões
-          echo "🔒 Ajustando permissões..."
-          chmod -R 775 storage bootstrap/cache 2>/dev/null || true
-          
+
+          # Variáveis de ambiente
+          export PATH="/usr/bin/ea-php83:$PATH"
+          export COMPOSER_ALLOW_SUPERUSER=1
+
+          # Instalar dependências PHP
+          /opt/cpanel/ea-php83/root/bin/php /opt/cpanel/composer/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+          # Frontend
+          npm install
+          npm run build
+
           # Comandos Laravel
-          echo "⚡ Executando comandos Laravel..."
-          
-          # Verificar se precisa gerar key
-          if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
-              echo "🔑 Gerando APP_KEY..."
-              php artisan key:generate --force
-          fi
-          
-          # Cache e otimizações
-          php artisan cache:clear
-          php artisan config:clear
-          php artisan route:clear
-          php artisan view:clear
-          
-          # Migrations
-          php artisan migrate --force
-          
-          # Storage link
-          php artisan storage:link || true
-          
-          # Otimizar para produção
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-          
-          # Limpar arquivos temporários
-          rm -f ~/deploy_temp/deploy.tar.gz
-          
+          /opt/cpanel/ea-php83/root/bin/php artisan migrate --force
+          /opt/cpanel/ea-php83/root/bin/php artisan config:cache
+          /opt/cpanel/ea-php83/root/bin/php artisan route:cache
+          /opt/cpanel/ea-php83/root/bin/php artisan view:cache
+          /opt/cpanel/ea-php83/root/bin/php artisan cache:clear
+
           echo "✅ Deploy concluído com sucesso!"
-          EOFDEPLOY
-          
-          chmod +x deploy-remote.sh
 
-      - name: Upload files to server
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          source: "deploy.tar.gz,deploy-remote.sh"
-          target: "~/deploy_temp"
-
-      - name: Execute deployment
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            cd ~/deploy_temp
-            chmod +x deploy-remote.sh
-            bash deploy-remote.sh
-            rm -rf ~/deploy_temp
+          EOF
       
       - name: Notify deployment success
         if: success()
