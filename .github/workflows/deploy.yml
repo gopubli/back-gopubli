@@ -31,7 +31,7 @@ jobs:
         
       - name: Create deployment archive
         run: |
-          tar -czf deploy.tar.gz \
+          tar -czf /tmp/deploy.tar.gz \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='node_modules' \
@@ -46,7 +46,10 @@ jobs:
             --exclude='storage/logs/*' \
             --exclude='public/hot' \
             --exclude='*.md' \
+            --exclude='deploy.tar.gz' \
+            --exclude='deploy-remote.sh' \
             .
+          mv /tmp/deploy.tar.gz .
 
       - name: Create deployment script
         run: |
