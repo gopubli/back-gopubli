@@ -1,4 +1,4 @@
-name: Deploy Laravel via FTP
+name: Deploy to GoPubli via SSH
 
 on:
   push:
@@ -17,164 +17,136 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.3'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, zip
+          coverage: none
           
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
         
-      - name: Install Node dependencies
-        run: npm install
-        
-      - name: Prepare deployment files
+      - name: Install Node dependencies and build assets
         run: |
-          mkdir -p deployment
-          rsync -av \
-            --exclude='.git*' \
+          npm ci
+          npm run build
+        
+      - name: Create deployment archive
+        run: |
+          tar -czf deploy.tar.gz \
+            --exclude='.git' \
             --exclude='.github' \
             --exclude='node_modules' \
             --exclude='tests' \
             --exclude='.env' \
             --exclude='.env.example' \
-            --exclude='deployment' \
-            --exclude='README.md' \
+            --exclude='storage/app/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/testing/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/logs/*' \
+            --exclude='public/hot' \
             --exclude='*.md' \
-            ./ deployment/
-          
-          # Garantir estrutura de diretórios necessários
-          mkdir -p deployment/storage/app/public
-          mkdir -p deployment/storage/framework/{cache,sessions,views}/data
-          mkdir -p deployment/storage/logs
-          mkdir -p deployment/bootstrap/cache
-          
-          # Criar arquivos .gitkeep
-          touch deployment/storage/app/.gitkeep
-          touch deployment/storage/app/public/.gitkeep
-          touch deployment/storage/framework/cache/.gitkeep
-          touch deployment/storage/framework/sessions/.gitkeep
-          touch deployment/storage/framework/views/.gitkeep
-          touch deployment/storage/logs/.gitkeep
-          touch deployment/bootstrap/cache/.gitkeep
-            
-      - name: Create setup script in deployment
+            .
+
+      - name: Create deployment script
         run: |
-          cat > deployment/public/setup-server.php << 'EOFSETUP'
-          <?php
-          $secret = $_GET['secret'] ?? '';
-          if ($secret !== 'gopubli2026') die('Acesso negado. Use: ?secret=gopubli2026');
-          echo "<h1>🚀 Setup GoPubli API</h1><pre>";
+          cat > deploy-remote.sh << 'EOFDEPLOY'
+          #!/bin/bash
+          set -e
           
-          // Verificações de ambiente
-          echo "🔍 Verificando ambiente...\n";
-          echo "PHP Version: " . phpversion() . "\n";
-          echo "Laravel Path: " . __DIR__ . "\n\n";
+          # Configurações
+          DEPLOY_PATH="/home/gopublicom/api.gopubli.com.br"
+          BACKUP_PATH="/home/gopublicom/backups"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
-          // Verificar diretórios
-          $requiredDirs = [
-              __DIR__.'/../storage/app',
-              __DIR__.'/../storage/framework/cache',
-              __DIR__.'/../storage/framework/sessions',
-              __DIR__.'/../storage/framework/views',
-              __DIR__.'/../storage/logs',
-              __DIR__.'/../bootstrap/cache'
-          ];
+          echo "🚀 Iniciando deploy - $TIMESTAMP"
           
-          echo "📁 Verificando diretórios...\n";
-          foreach ($requiredDirs as $dir) {
-              if (!is_dir($dir)) {
-                  mkdir($dir, 0775, true);
-                  echo "✅ Criado: $dir\n";
-              }
-              if (!is_writable($dir)) {
-                  @chmod($dir, 0775);
-                  echo "⚠️  Tentando ajustar permissões: $dir\n";
-              }
-          }
-          echo "\n";
+          # Criar diretórios se não existirem
+          mkdir -p $BACKUP_PATH
+          mkdir -p $DEPLOY_PATH/storage/{app/public,framework/{cache/data,sessions,views},logs}
+          mkdir -p $DEPLOY_PATH/bootstrap/cache
           
-          try {
-              require __DIR__.'/../vendor/autoload.php';
-              $app = require_once __DIR__.'/../bootstrap/app.php';
-              $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-              echo "✅ Laravel carregado!\n\n";
-              
-              // Verificar .env
-              if (!file_exists(__DIR__.'/../.env')) {
-                  echo "❌ ERRO: Arquivo .env não encontrado!\n";
-                  echo "Crie o arquivo .env na raiz do projeto.\n\n";
-                  die();
-              }
-              echo "✅ Arquivo .env encontrado!\n\n";
-              
-              echo "📝 Gerando APP_KEY...\n";
-              $kernel->call('key:generate', ['--force' => true]);
-              echo "✅ APP_KEY gerada!\n\n";
-              
-              echo "🧹 Limpando caches...\n";
-              $kernel->call('cache:clear');
-              $kernel->call('config:clear');
-              $kernel->call('route:clear');
-              $kernel->call('view:clear');
-              echo "✅ Caches limpos!\n\n";
-              
-              echo "🗄️  Executando migrations...\n";
-              $kernel->call('migrate', ['--force' => true]);
-              echo "✅ Migrations executadas!\n\n";
-              
-              echo "🌱 Executando seeders...\n";
-              try { 
-                  $kernel->call('db:seed', ['--force' => true]); 
-                  echo "✅ Seeders executados!\n\n"; 
-              } catch (Exception $e) { 
-                  echo "⚠️  Seeders: " . $e->getMessage() . "\n\n"; 
-              }
-              
-              echo "🔗 Criando storage link...\n";
-              try { 
-                  $kernel->call('storage:link'); 
-                  echo "✅ Storage link criado!\n\n"; 
-              } catch (Exception $e) { 
-                  echo "⚠️  Storage link: " . $e->getMessage() . "\n\n"; 
-              }
-              
-              echo "⚡ Otimizando para produção...\n";
-              $kernel->call('config:cache');
-              $kernel->call('route:cache');
-              $kernel->call('view:cache');
-              echo "✅ Otimização concluída!\n\n";
-              
-              echo "========================================\n";
-              echo "🎉 SETUP CONCLUÍDO COM SUCESSO!\n";
-              echo "========================================\n\n";
-              echo "⚠️  IMPORTANTE: DELETE ESTE ARQUIVO AGORA!\n";
-              echo "rm " . __FILE__ . "\n\n";
-              echo "Acesse: https://api.gopubli.com.br\n";
-          } catch (Exception $e) {
-              echo "❌ ERRO: " . $e->getMessage() . "\n\n";
-              echo $e->getTraceAsString();
-          }
-          echo "</pre>";
-          ?>
-          EOFSETUP
-            
-      - name: Deploy to server via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+          # Backup do .env atual (se existir)
+          if [ -f "$DEPLOY_PATH/.env" ]; then
+              echo "📋 Backup do .env..."
+              cp $DEPLOY_PATH/.env $BACKUP_PATH/.env.$TIMESTAMP
+          fi
+          
+          # Extrair novos arquivos
+          echo "📦 Extraindo arquivos..."
+          cd $DEPLOY_PATH
+          tar -xzf ~/deploy_temp/deploy.tar.gz
+          
+          # Restaurar .env
+          if [ -f "$BACKUP_PATH/.env.$TIMESTAMP" ]; then
+              cp $BACKUP_PATH/.env.$TIMESTAMP $DEPLOY_PATH/.env
+          fi
+          
+          # Ajustar permissões
+          echo "🔒 Ajustando permissões..."
+          chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+          
+          # Comandos Laravel
+          echo "⚡ Executando comandos Laravel..."
+          
+          # Verificar se precisa gerar key
+          if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
+              echo "🔑 Gerando APP_KEY..."
+              php artisan key:generate --force
+          fi
+          
+          # Cache e otimizações
+          php artisan cache:clear
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          
+          # Migrations
+          php artisan migrate --force
+          
+          # Storage link
+          php artisan storage:link || true
+          
+          # Otimizar para produção
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          
+          # Limpar arquivos temporários
+          rm -f ~/deploy_temp/deploy.tar.gz
+          
+          echo "✅ Deploy concluído com sucesso!"
+          EOFDEPLOY
+          
+          chmod +x deploy-remote.sh
+
+      - name: Upload files to server
+        uses: appleboy/scp-action@master
         with:
-          server: ftp.gopubli.com.br
-          username: gopublicom
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          port: 21
-          local-dir: ./deployment/
-          server-dir: ./api.gopubli.com.br/
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/storage/logs/**
-            **/storage/framework/cache/**
-            **/storage/framework/sessions/**
-            **/storage/framework/views/**
-            **/.env
-            **/tests/**
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "deploy.tar.gz,deploy-remote.sh"
+          target: "~/deploy_temp"
+
+      - name: Execute deployment
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ~/deploy_temp
+            chmod +x deploy-remote.sh
+            bash deploy-remote.sh
+            rm -rf ~/deploy_temp
+      
+      - name: Notify deployment success
+        if: success()
+        run: echo "✅ Deployment completed successfully!"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: echo "❌ Deployment failed!"
