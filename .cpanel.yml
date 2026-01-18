@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/gopublicom/api.gopubli.com.br
+    - export DEPLOYPATH=/home/gopublicom/repositories/back-gopubli
 
     - /bin/rsync -av --delete --exclude=".git" ./ $DEPLOYPATH
 
