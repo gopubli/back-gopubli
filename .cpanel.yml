@@ -2,5 +2,17 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/gopublicom/api.gopubli.com.br
+
     - /bin/rsync -av --delete --exclude=".git" ./ $DEPLOYPATH
+
+    - /bin/chmod -R 755 $DEPLOYPATH
+    - /bin/chmod -R 775 $DEPLOYPATH/storage
+    - /bin/chmod -R 775 $DEPLOYPATH/bootstrap/cache
+
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan key:generate || true
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan config:clear || true
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan route:clear || true
+    - /opt/cpanel/ea-php83/root/bin/php $DEPLOYPATH/artisan view:clear || true
+
     - echo "Deploy OK"
+    - /bin/echo "✅ Deploy concluído com sucesso!"
