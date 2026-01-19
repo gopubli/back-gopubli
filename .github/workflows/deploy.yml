@@ -1,0 +1,87 @@
+name: Deploy to GoPubli via SSH
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --no-perms -e 'ssh -p 22022 -o StrictHostKeyChecking=no' \
+            --exclude='.git*' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='composer.phar' \
+            --exclude='.env' \
+            --exclude='storage/app/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/logs/*' \
+            --exclude='tests' \
+            --exclude='*.md' \
+            --delete \
+            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/gopublicom/repositories/back-gopubli/
+  
+      - name: Run deployment commands
+        run: |
+          ssh -p 22022 -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /home/gopublicom/repositories/back-gopubli
+
+          # Garantir estrutura de diretórios
+          mkdir -p storage/{app/public,framework/{cache/data,sessions,views},logs}
+          mkdir -p bootstrap/cache
+
+          # Ajustar permissões
+          chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+          find storage -type d -exec chmod 755 {} \; 2>/dev/null || true
+          find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
+
+          # Instalar dependências PHP
+          /opt/cpanel/ea-php83/root/bin/php /opt/cpanel/composer/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+          # Frontend (se necessário)
+          if [ -f "package.json" ]; then
+            npm install
+            npm run build
+          fi
+
+          # Verificar se .env existe
+          if [ ! -f ".env" ]; then
+            echo "⚠️ Aviso: Arquivo .env não encontrado!"
+          fi
+
+          # Comandos Laravel
+          /opt/cpanel/ea-php83/root/bin/php artisan key:generate --force || true
+          /opt/cpanel/ea-php83/root/bin/php artisan migrate --force
+          /opt/cpanel/ea-php83/root/bin/php artisan storage:link || true
+          
+          # Cache
+          /opt/cpanel/ea-php83/root/bin/php artisan config:cache
+          /opt/cpanel/ea-php83/root/bin/php artisan route:cache
+          /opt/cpanel/ea-php83/root/bin/php artisan view:cache
+
+          echo "✅ Deploy concluído!"
+          EOF
+      
+      - name: Notify success
+        if: success()
+        run: echo "✅ Deploy completed successfully!"
+
+      - name: Notify failure
+        if: failure()
+        run: echo "❌ Deploy failed!"
