@@ -51,14 +51,21 @@ jobs:
           find storage -type d -exec chmod 755 {} \; 2>/dev/null || true
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
-          # Instalar dependências PHP
-          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          # Instalar dependências PHP (sem scripts devido a bug do Composer)
+          composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          
+          # Rodar autoload dump manualmente
+          composer dump-autoload --optimize --no-dev
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
             echo "⚠️ Aviso: Arquivo .env não encontrado!"
+            exit 1
           fi
 
+          # Descobrir pacotes Laravel
+          php artisan package:discover --ansi
+          
           # Comandos Laravel
           php artisan key:generate --force || true
           php artisan migrate --force
