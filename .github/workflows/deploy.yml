@@ -64,14 +64,20 @@ jobs:
           php artisan package:discover --ansi
           
           # Comandos Laravel
-          php artisan key:generate --force || true
-          php artisan migrate --force
-          php artisan storage:link || true
+          echo "🔑 Gerando Application Key..."
+          php artisan key:generate --force --ansi || true
+          
+          echo "🗄️  Executando Migrations..."
+          php artisan migrate --force --verbose --ansi
+          
+          echo "🔗 Criando link do storage..."
+          php artisan storage:link --ansi || true
           
           # Cache
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
+          echo "⚡ Otimizando cache..."
+          php artisan config:cache --ansi
+          php artisan route:cache --ansi
+          php artisan view:cache --ansi
 
           echo "✅ Deploy concluído!"
           EOF
