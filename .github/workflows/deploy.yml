@@ -52,13 +52,7 @@ jobs:
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
           # Instalar dependências PHP
-          /opt/cpanel/ea-php83/root/bin/php /opt/cpanel/composer/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-
-          # Frontend (se necessário)
-          if [ -f "package.json" ]; then
-            npm install
-            npm run build
-          fi
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
@@ -66,14 +60,14 @@ jobs:
           fi
 
           # Comandos Laravel
-          /opt/cpanel/ea-php83/root/bin/php artisan key:generate --force || true
-          /opt/cpanel/ea-php83/root/bin/php artisan migrate --force
-          /opt/cpanel/ea-php83/root/bin/php artisan storage:link || true
+          php artisan key:generate --force || true
+          php artisan migrate --force
+          php artisan storage:link || true
           
           # Cache
-          /opt/cpanel/ea-php83/root/bin/php artisan config:cache
-          /opt/cpanel/ea-php83/root/bin/php artisan route:cache
-          /opt/cpanel/ea-php83/root/bin/php artisan view:cache
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
 
           echo "✅ Deploy concluído!"
           EOF
