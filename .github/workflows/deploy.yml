@@ -20,7 +20,7 @@ jobs:
 
       - name: Sync files to server
         run: |
-          rsync -avz --no-perms -e 'ssh -p 22 -o StrictHostKeyChecking=no' \
+          rsync -avz --no-perms -e 'ssh -p 65002 -o StrictHostKeyChecking=no' \
             --exclude='.git*' \
             --exclude='.github' \
             --exclude='node_modules' \
