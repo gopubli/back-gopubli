@@ -35,12 +35,12 @@ jobs:
             --exclude='tests' \
             --exclude='*.md' \
             --delete \
-            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/gopublicom/www/back-gopubli/
+            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/gopublicom/api.gopubli.com.br
   
       - name: Run deployment commands
         run: |
           ssh -p 65002 -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd /home/gopublicom/www/back-gopubli
+          cd /home/gopublicom/api.gopubli.com.br
 
           # Garantir estrutura de diretórios
           mkdir -p storage/{app/public,framework/{cache/data,sessions,views},logs}
