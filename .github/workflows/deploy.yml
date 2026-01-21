@@ -53,9 +53,6 @@ jobs:
 
           # Instalar dependências PHP (sem scripts devido a bug do Composer)
           composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader --no-dev
-          
-          # Rodar autoload dump manualmente
-          composer dump-autoload --optimize --no-dev
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
@@ -63,7 +60,7 @@ jobs:
             exit 1
           fi
 
-          # Descobrir pacotes Laravel
+          # Descobrir pacotes Laravel manualmente
           php artisan package:discover --ansi
           
           # Comandos Laravel
