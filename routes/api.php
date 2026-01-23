@@ -22,6 +22,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(base_path('routes/apiv1.php'));
 
+Route::get('/ping', function () {
+    return response()->json(['pong' => true]);
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | API Version 2 (Futuro)
