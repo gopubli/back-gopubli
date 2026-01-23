@@ -79,6 +79,12 @@ jobs:
           php artisan package:discover --ansi
           
           # Comandos Laravel
+          echo "🧹 Limpando caches antigos..."
+          php artisan cache:clear --ansi
+          php artisan config:clear --ansi
+          php artisan route:clear --ansi
+          php artisan view:clear --ansi
+          
           echo "🔑 Gerando Application Key..."
           php artisan key:generate --force --ansi || true
           
@@ -93,6 +99,10 @@ jobs:
           php artisan config:cache --ansi
           php artisan route:cache --ansi
           php artisan view:cache --ansi
+          
+          # Verificar rotas carregadas
+          echo "🔍 Verificando rotas da API..."
+          php artisan route:list --path=api/v1 --ansi | head -20
 
           echo "✅ Deploy concluído!"
           EOF
