@@ -50,8 +50,26 @@ jobs:
           find storage -type d -exec chmod 755 {} \; 2>/dev/null || true
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
+          # Atualizar Composer para versão estável
+          echo "📦 Atualizando Composer..."
+          composer self-update --stable 2>/dev/null || {
+            echo "⚠️ Falha ao atualizar composer global, baixando versão local..."
+            php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+            php composer-setup.php --quiet
+            php -r "unlink('composer-setup.php');"
+            alias composer='php composer.phar'
+          }
+          
+          # Limpar cache do Composer
+          composer clear-cache 2>/dev/null || true
+
           # Instalar dependências PHP
-          composer install --no-dev --optimize-autoloader --classmap-authoritative --ignore-platform-reqs --no-interaction
+          echo "📦 Instalando dependências..."
+          if [ -f "composer.phar" ]; then
+            php composer.phar install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction
+          else
+            composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction
+          fi
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
