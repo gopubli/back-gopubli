@@ -24,7 +24,7 @@ jobs:
             --exclude='.git*' \
             --exclude='.github' \
             --exclude='node_modules' \
-            --exclude='composer.phar' \
+            --exclude='vendor' \
             --exclude='.env' \
             --exclude='storage/app/*' \
             --exclude='storage/framework/cache/data/*' \
@@ -50,26 +50,19 @@ jobs:
           find storage -type d -exec chmod 755 {} \; 2>/dev/null || true
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
-          # Atualizar Composer para versão estável
-          echo "📦 Atualizando Composer..."
-          composer self-update --stable 2>/dev/null || {
-            echo "⚠️ Falha ao atualizar composer global, baixando versão local..."
-            php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-            php composer-setup.php --quiet
-            php -r "unlink('composer-setup.php');"
-            alias composer='php composer.phar'
-          }
-          
-          # Limpar cache do Composer
-          composer clear-cache 2>/dev/null || true
-
-          # Instalar dependências PHP
-          echo "📦 Instalando dependências..."
-          if [ -f "composer.phar" ]; then
-            php composer.phar install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction
-          else
-            composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction
+          # Baixar Composer local (evitar composer global corrompido)
+          echo "📦 Preparando Composer..."
+          if [ ! -f "composer.phar" ] || [ ! -s "composer.phar" ]; then
+            echo "📥 Baixando Composer..."
+            curl -sS https://getcomposer.org/installer | php
           fi
+          
+          # Instalar dependências PHP usando composer.phar local
+          echo "📦 Instalando dependências..."
+          php composer.phar install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction 2>&1 || {
+            echo "⚠️ Erro no composer install, tentando sem verificação de plataforma..."
+            php composer.phar install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --ignore-platform-reqs
+          }
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
