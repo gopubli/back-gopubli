@@ -30,6 +30,10 @@ use App\Http\Controllers\Api\AdminManagementController;
 |--------------------------------------------------------------------------
 */
 
+Route::get('/ping', function () {
+    return response()->json(['pong' => true]);
+});
+
 // Health check
 Route::get('/health', function () {
     return response()->json([
