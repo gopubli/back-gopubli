@@ -50,8 +50,8 @@ jobs:
           find storage -type d -exec chmod 755 {} \; 2>/dev/null || true
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
-          # Instalar dependências PHP (sem scripts devido a bug do Composer)
-          composer install --no-dev --optimize-autoloader --classmap-authoritative
+          # Instalar dependências PHP
+          composer install --no-dev --optimize-autoloader --classmap-authoritative --ignore-platform-reqs --no-interaction
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
