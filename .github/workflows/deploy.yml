@@ -24,7 +24,6 @@ jobs:
             --exclude='.git*' \
             --exclude='.github' \
             --exclude='node_modules' \
-            --exclude='vendor' \
             --exclude='composer.phar' \
             --exclude='.env' \
             --exclude='storage/app/*' \
@@ -52,7 +51,7 @@ jobs:
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
           # Instalar dependências PHP (sem scripts devido a bug do Composer)
-          composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          composer install --no-dev --optimize-autoloader --classmap-authoritative
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
