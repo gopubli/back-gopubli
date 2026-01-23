@@ -13,10 +13,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip
+          tools: composer:v2
+
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install PHP dependencies locally
+        run: |
+          composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction
 
       - name: Sync files to server
         run: |
@@ -24,7 +35,6 @@ jobs:
             --exclude='.git*' \
             --exclude='.github' \
             --exclude='node_modules' \
-            --exclude='vendor' \
             --exclude='.env' \
             --exclude='storage/app/*' \
             --exclude='storage/framework/cache/data/*' \
@@ -50,19 +60,14 @@ jobs:
           find storage -type d -exec chmod 755 {} \; 2>/dev/null || true
           find storage -type f -exec chmod 644 {} \; 2>/dev/null || true
 
-          # Baixar Composer local (evitar composer global corrompido)
-          echo "📦 Preparando Composer..."
-          if [ ! -f "composer.phar" ] || [ ! -s "composer.phar" ]; then
-            echo "📥 Baixando Composer..."
-            curl -sS https://getcomposer.org/installer | php
+          # Verificar se vendor existe (enviado pelo rsync)
+          echo "📦 Verificando dependências..."
+          if [ ! -d "vendor" ]; then
+            echo "❌ Diretório vendor não encontrado!"
+            exit 1
           fi
           
-          # Instalar dependências PHP usando composer.phar local
-          echo "📦 Instalando dependências..."
-          php composer.phar install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction 2>&1 || {
-            echo "⚠️ Erro no composer install, tentando sem verificação de plataforma..."
-            php composer.phar install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --ignore-platform-reqs
-          }
+          echo "✅ Dependências já instaladas (vendor sincronizado)"
 
           # Verificar se .env existe
           if [ ! -f ".env" ]; then
