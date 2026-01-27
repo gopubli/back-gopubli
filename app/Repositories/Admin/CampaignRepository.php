@@ -51,18 +51,18 @@ class CampaignRepository extends BaseRepository
 
     public function getTotalBudget(): float
     {
-        return $this->model->sum('budget') ?? 0;
+        return $this->model->sum('amount') ?? 0;
     }
 
     public function getAverageBudget(): float
     {
-        return $this->model->avg('budget') ?? 0;
+        return $this->model->avg('amount') ?? 0;
     }
 
     public function getActiveCampaigns(): int
     {
         return $this->model
-            ->whereIn('status', ['active', 'in_progress'])
+            ->whereIn('status', ['open', 'in_progress'])
             ->count();
     }
 

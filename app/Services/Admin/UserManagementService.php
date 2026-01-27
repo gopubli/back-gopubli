@@ -36,12 +36,12 @@ class UserManagementService
 
     public function blockInfluencer(int $id): bool
     {
-        return $this->influencerRepository->update($id, ['status' => 'blocked']);
+        return $this->influencerRepository->update($id, ['active' => false]);
     }
 
     public function unblockInfluencer(int $id): bool
     {
-        return $this->influencerRepository->update($id, ['status' => 'active']);
+        return $this->influencerRepository->update($id, ['active' => true]);
     }
 
     // Company Methods
@@ -67,12 +67,12 @@ class UserManagementService
 
     public function blockCompany(int $id): bool
     {
-        return $this->companyRepository->update($id, ['status' => 'blocked']);
+        return $this->companyRepository->update($id, ['active' => false]);
     }
 
     public function unblockCompany(int $id): bool
     {
-        return $this->companyRepository->update($id, ['status' => 'active']);
+        return $this->companyRepository->update($id, ['active' => true]);
     }
 
     // Statistics

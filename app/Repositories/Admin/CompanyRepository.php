@@ -34,15 +34,15 @@ class CompanyRepository extends BaseRepository
     public function countByStatus(): array
     {
         return $this->model
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
+            ->selectRaw('active, COUNT(*) as count')
+            ->groupBy('active')
+            ->pluck('count', 'active')
             ->toArray();
     }
 
     public function getActiveCompanies(): int
     {
-        return $this->model->where('status', 'active')->count();
+        return $this->model->where('active', true)->count();
     }
 
     public function getNewCompaniesThisMonth(): int
@@ -57,13 +57,14 @@ class CompanyRepository extends BaseRepository
     {
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('company_name', 'like', "%{$filters['search']}%")
-                    ->orWhere('email', 'like', "%{$filters['search']}%");
+                $q->where('name', 'like', '%' . $filters['search'] . '%')
+                    ->orWhere('email', 'like', '%' . $filters['search'] . '%');
             });
         }
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (isset($filters['status'])) {
+            $active = $filters['status'] === 'active';
+            $query->where('active', $active);
         }
 
         if (!empty($filters['subscription_status'])) {

@@ -34,15 +34,15 @@ class InfluencerRepository extends BaseRepository
     public function countByStatus(): array
     {
         return $this->model
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
+            ->selectRaw('active, COUNT(*) as count')
+            ->groupBy('active')
+            ->pluck('count', 'active')
             ->toArray();
     }
 
     public function getActiveInfluencers(): int
     {
-        return $this->model->where('status', 'active')->count();
+        return $this->model->where('active', true)->count();
     }
 
     public function getNewInfluencersThisMonth(): int
@@ -62,8 +62,9 @@ class InfluencerRepository extends BaseRepository
             });
         }
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (isset($filters['status'])) {
+            $active = $filters['status'] === 'active';
+            $query->where('active', $active);
         }
 
         return $query;

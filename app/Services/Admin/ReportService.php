@@ -49,8 +49,8 @@ class ReportService
             ->where('status', '!=', 'cancelled')
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as period')
             ->selectRaw('COUNT(*) as campaigns_count')
-            ->selectRaw('SUM(budget) as total_budget')
-            ->selectRaw('SUM(budget * 0.10) as platform_fees') // 10% de taxa
+            ->selectRaw('SUM(amount) as total_budget')
+            ->selectRaw('SUM(amount * 0.10) as platform_fees') // 10% de taxa
             ->groupBy('period')
             ->orderBy('period')
             ->get();
@@ -60,7 +60,7 @@ class ReportService
             ->where('status', 'active')
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as period')
             ->selectRaw('COUNT(*) as count')
-            ->selectRaw('SUM(amount) as total')
+            ->selectRaw('SUM(monthly_amount) as total')
             ->groupBy('period')
             ->orderBy('period')
             ->get();
@@ -146,11 +146,11 @@ class ReportService
     {
         $platformFees = DB::table('campaigns')
             ->where('status', '!=', 'cancelled')
-            ->sum(DB::raw('budget * 0.10')) ?? 0;
+            ->sum(DB::raw('amount * 0.10')) ?? 0;
 
         $subscriptions = DB::table('subscriptions')
             ->where('status', 'active')
-            ->sum('amount') ?? 0;
+            ->sum('monthly_amount') ?? 0;
 
         return $platformFees + $subscriptions;
     }
@@ -159,7 +159,7 @@ class ReportService
     {
         return DB::table('campaigns')
             ->where('status', '!=', 'cancelled')
-            ->sum(DB::raw('budget * 0.10')) ?? 0;
+            ->sum(DB::raw('amount * 0.10')) ?? 0;
     }
 
     private function calculateMonthlyRevenue(): float
@@ -168,13 +168,13 @@ class ReportService
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->where('status', '!=', 'cancelled')
-            ->sum(DB::raw('budget * 0.10')) ?? 0;
+            ->sum(DB::raw('amount * 0.10')) ?? 0;
 
         $subscriptions = DB::table('subscriptions')
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->where('status', 'active')
-            ->sum('amount') ?? 0;
+            ->sum('monthly_amount') ?? 0;
 
         return $platformFees + $subscriptions;
     }
@@ -187,7 +187,7 @@ class ReportService
             ->whereMonth('created_at', now()->subMonth()->month)
             ->whereYear('created_at', now()->subMonth()->year)
             ->where('status', '!=', 'cancelled')
-            ->sum(DB::raw('budget * 0.10')) ?? 0;
+            ->sum(DB::raw('amount * 0.10')) ?? 0;
 
         if ($lastMonthRevenue == 0) {
             return $currentMonth > 0 ? 100 : 0;
