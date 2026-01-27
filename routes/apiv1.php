@@ -13,6 +13,11 @@ use App\Http\Controllers\Api\GoCoinController;
 use App\Http\Controllers\Api\TermsController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\AdminManagementController;
+use App\Http\Controllers\Api\Admin\CampaignManagementController;
+use App\Http\Controllers\Api\Admin\ApplicationManagementController;
+use App\Http\Controllers\Api\Admin\UserManagementController;
+use App\Http\Controllers\Api\Admin\GoCoinManagementController;
+use App\Http\Controllers\Api\Admin\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -135,19 +140,62 @@ Route::middleware(['auth:sanctum', 'type.administrator'])->prefix('admin')->grou
     
     // Gerenciamento de Influencers
     Route::prefix('influencers')->group(function () {
-        Route::get('/', [AdminManagementController::class, 'listInfluencers']);
-        Route::get('/{id}', [AdminManagementController::class, 'showInfluencer']);
-        Route::put('/{id}', [AdminManagementController::class, 'updateInfluencer']);
-        Route::delete('/{id}', [AdminManagementController::class, 'deleteInfluencer']);
+        Route::get('/', [UserManagementController::class, 'listInfluencers']);
+        Route::get('/{id}', [UserManagementController::class, 'showInfluencer']);
+        Route::put('/{id}', [UserManagementController::class, 'updateInfluencer']);
+        Route::delete('/{id}', [UserManagementController::class, 'deleteInfluencer']);
+        Route::post('/{id}/block', [UserManagementController::class, 'blockInfluencer']);
+        Route::post('/{id}/unblock', [UserManagementController::class, 'unblockInfluencer']);
     });
     
     // Gerenciamento de Empresas
     Route::prefix('companies')->group(function () {
-        Route::get('/', [AdminManagementController::class, 'listCompanies']);
-        Route::get('/{id}', [AdminManagementController::class, 'showCompany']);
-        Route::put('/{id}', [AdminManagementController::class, 'updateCompany']);
-        Route::delete('/{id}', [AdminManagementController::class, 'deleteCompany']);
+        Route::get('/', [UserManagementController::class, 'listCompanies']);
+        Route::get('/{id}', [UserManagementController::class, 'showCompany']);
+        Route::put('/{id}', [UserManagementController::class, 'updateCompany']);
+        Route::delete('/{id}', [UserManagementController::class, 'deleteCompany']);
+        Route::post('/{id}/block', [UserManagementController::class, 'blockCompany']);
+        Route::post('/{id}/unblock', [UserManagementController::class, 'unblockCompany']);
     });
+    
+    // Gerenciamento de Campanhas
+    Route::prefix('campaigns')->group(function () {
+        Route::get('/', [CampaignManagementController::class, 'index']);
+        Route::get('/statistics', [CampaignManagementController::class, 'statistics']);
+        Route::get('/top', [CampaignManagementController::class, 'topCampaigns']);
+        Route::get('/{id}', [CampaignManagementController::class, 'show']);
+        Route::put('/{id}', [CampaignManagementController::class, 'update']);
+        Route::post('/{id}/cancel', [CampaignManagementController::class, 'cancel']);
+        Route::delete('/{id}', [CampaignManagementController::class, 'destroy']);
+    });
+    
+    // Gerenciamento de Candidaturas
+    Route::prefix('applications')->group(function () {
+        Route::get('/', [ApplicationManagementController::class, 'index']);
+        Route::get('/statistics', [ApplicationManagementController::class, 'statistics']);
+        Route::get('/{id}', [ApplicationManagementController::class, 'show']);
+        Route::put('/{id}/status', [ApplicationManagementController::class, 'updateStatus']);
+    });
+    
+    // Gerenciamento de GO Coins
+    Route::prefix('gocoins')->group(function () {
+        Route::get('/transactions', [GoCoinManagementController::class, 'index']);
+        Route::get('/statistics', [GoCoinManagementController::class, 'statistics']);
+        Route::get('/recent', [GoCoinManagementController::class, 'recentTransactions']);
+        Route::get('/wallet/{walletId}', [GoCoinManagementController::class, 'walletDetails']);
+        Route::post('/wallet/{walletId}/adjust', [GoCoinManagementController::class, 'adjustBalance']);
+    });
+    
+    // Relatórios
+    Route::prefix('reports')->group(function () {
+        Route::get('/dashboard', [ReportController::class, 'dashboard']);
+        Route::get('/revenue', [ReportController::class, 'revenue']);
+        Route::get('/campaigns', [ReportController::class, 'campaigns']);
+        Route::get('/users/growth', [ReportController::class, 'userGrowth']);
+    });
+    
+    // Estatísticas Gerais
+    Route::get('/statistics/users', [UserManagementController::class, 'userStatistics']);
 });
 
 /*
